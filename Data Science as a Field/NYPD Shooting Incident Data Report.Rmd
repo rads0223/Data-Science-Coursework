@@ -1,0 +1,120 @@
+---
+title: "NYPD Shooting Incidents Data Report"
+author: "R. Vaidya"
+date: "6/04/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+NYPD_shootings <- read_csv("https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD")
+NYPD_shootings <- NYPD_shootings %>% mutate(DATE = mdy(OCCUR_DATE))
+NYPD_shootings_main <- NYPD_shootings %>% select(BORO, VIC_AGE_GROUP, VIC_SEX, DATE)
+NYPD_shootings_time <- NYPD_shootings_main %>% select(DATE)
+NYPD_shootings_2020 <- NYPD_shootings_main %>%
+  filter(DATE >= as.Date('2020-01-01') & DATE <= as.Date('2020-12-31'))
+```
+Modeling Bias is a very real and harmful issue in data science. Bad models lead to bad conclusions that affect public policy. This is bias that occurs or can potentially occur, in any part of modeling and decision making. Models can have bias based on who builds them, how they are developed and how they are used.
+
+# Shooting Incidents in NYC since 2006 to present 
+
+
+Since 2006 there have been `r count(NYPD_shootings)` shooting incidents in NYC. Data is obtained from <https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD>. 
+
+In an effort to see how easy it is to have Modeling Bias, this data was analyzed to determine if there were strong trends or correlations in these shooting incidents in any particular borough, over time since 2006, and in victims' demographics such as their age and sex.
+
+#### Summary of the Shooting Incident Data
+Before summarizing the data, the data was cleaned to remove all the columns, that is, variables that were not necessary for analysis. For example, perpetrators' information or the specific latitude and longitude of each incident were not necessary for analysis. Then, data was also transformed to enable analysis. For example, the date was not in a data type easily accessible for analysis, so it was converted into a data type that could be used. 
+
+Points of data summary: 
+
+First, the minimum, maximum and median described the spread of the data in dates. The mode showed which date occurred the most in the data set. This showed that on this date, the highest number of shooting incidents occurred. 
+
+Second, there were some summary points related to victim demographics. Males were victims nearly ten times more often than women. The victims often tended to be males in the age group of 25-44.
+
+
+```{r NYPD_shooting_sum, echo=FALSE, message=FALSE}
+summary(NYPD_shootings_time)
+NYPD_shootings_main %>% 
+  count(VIC_SEX)
+NYPD_shootings_main %>% 
+  count(VIC_AGE_GROUP)
+```
+
+  
+
+
+
+## Shooting Incidents by Borough
+
+Table of Shooting Incidents by Borough
+
+```{r NYPD_shooting, echo=FALSE}
+count(NYPD_shootings_main, BORO) %>% arrange(desc(n))
+```
+
+The maximum number of shooting incidents, occurred in the Brooklyn borough, which was nearly **1.5 times** more than the next highest borough of Bronx. The minimum number of shooting Incidents occurred in Staten Island which was **one fourth** the number of shooting incidents in the next lowest borough of Manhattan.
+
+
+## Shooting Incidents Over Time
+
+
+```{r Time, echo=FALSE}
+ggplot(NYPD_shootings_main, aes(DATE)) +
+  geom_bar(fill = "red") +
+  theme_classic() +
+  labs(title = "Plot of number of shooting incidents daily over time since 2006")
+```
+
+There were some definite spikes in the number shooting incidents specifically in 2012 and 2020. There also seems to be a slight reduction in daily shooting incidents after 2012 until 2020. There is a major spike in this graph in 2020. This spike is higher than any of the previous years.
+
+```{r Time 2020, echo=FALSE}
+ggplot(NYPD_shootings_2020, aes(DATE)) +
+  geom_bar(fill = "red") +
+  theme_classic() +
+  labs(title = "Plot of number of shooting incidents daily in 2020")
+```
+
+In 2020, there were two major events that could have added to the number of shooting incidents: the COVID-19 pandemic and the Black Lives Matter Movement. The Black Lives Matter Movement protests were at their height in the summer of 2020 in New York City. The data above correlated with that time period. 
+
+
+## Victim Age Vs Sex
+
+```{r Victim, echo=FALSE}
+ggplot(NYPD_shootings_main, aes(x=VIC_SEX, y=VIC_AGE_GROUP)) + geom_jitter()
+```
+
+When plotting a victim's age against the victim's sex, the categories of males in the age group of 18-24 and 25-44 had the highest saturation of plot points. The next highest category seem to be males below 18. Just by looking at this plot, it would seem the young males were the most frequent victims of shooting incidents in New York City.
+
+
+### Modeling Data
+Modeling Data to determine if there is a correlation between the Victim's Age and Sex
+
+```{r Modeling Perp, echo=FALSE, warning=FALSE}
+chisq.test(NYPD_shootings_main$VIC_SEX, NYPD_shootings_main$VIC_AGE_GROUP)
+```
+
+Modeling was used to determine if there was a correlation between the victim’s age and their sex and to see if it is possible to identify a potential victim.
+A Pearson’s chi-squared test  was used. This test is applied to sets of categorical data.
+
+Since the p-value was less than the significance level of 0.05, the null hypothesis was rejected and it was concluded that the two variables were, indeed, independent. Just because a person is in the age range below 45 and a male, does not mean he will be a victim of a shooting incident.
+
+### Modeling Bias
+
+As per the Modeling above, it did not seem as if a victim's age and sex have anything to do with being a victim in a shooting. However, based on the data above, it did seem that young males are the frequent victims of shooting incidents. 
+
+Superficially, it would seem that young males living in Brooklyn in 2020 would be the most frequent victims of shooting incidents.
+
+However, upon deeper analysis, it could be concluded that there were other factors that affect when and where an incident happens, and victims age and sex were independent of each other.
+
+So, this model was not very good for predicting victims.  
+
+There are many different uses for modeling these shooting incidents such as predictive policing. There are many different ethical arguments that can be used in favor or predictive policing, but a lot of harm can come of it also.
+
+Correlation is not causation. Data must be looked at carefully and not mindlessly. Otherwise, grievous errors can be made in our analyses, models and predictions and can cause a terrible effect on decision making in public policy. 
